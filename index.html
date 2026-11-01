@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2c3e91">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Taboo · Giovanissimi AC</title>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .catch(err => console.error('Service Worker registration failed:', err));
+    });
+  }
+</script>
+<style>
+:root{--bg:#f3f5fb;--fg:#17203a;--card:#fff;--mut:#64708f;--pri:#2c3e91;--on:#fff;--sun:#f6c23e;--ok:#14915a;--ko:#d23a3a;--bd:#d9deee;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1426;--fg:#eef1fb;--card:#1a2140;--mut:#98a3c7;--pri:#8fa2ff;--on:#0f1426;--bd:#2c3560}}
+:root[data-theme="dark"]{--bg:#0f1426;--fg:#eef1fb;--card:#1a2140;--mut:#98a3c7;--pri:#8fa2ff;--on:#0f1426;--bd:#2c3560}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 "Trebuchet MS","Segoe UI",system-ui,sans-serif}
+#app{max-width:560px;margin:0 auto;padding:18px 16px 40px}
+h1{font-size:2.1rem;line-height:1.05;margin:6px 0 4px;letter-spacing:-.02em}
+h2{font-size:1.15rem;margin:22px 0 8px}
+p{margin:4px 0}.mut{color:var(--mut);font-size:.9rem}
+.card{background:var(--card);border:2px solid var(--bd);border-radius:18px;padding:14px}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;border-radius:14px;padding:12px 16px;font-weight:700;background:var(--card);border:2px solid var(--bd)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+.pri{background:var(--pri);color:var(--on);border-color:var(--pri)}
+.big{width:100%;padding:16px;font-size:1.2rem;margin-top:14px}
+input[type=text],select,textarea{width:100%;padding:10px 12px;border-radius:12px;border:2px solid var(--bd);background:var(--card)}
+.row{display:flex;gap:8px;align-items:center}.row>*{flex:1}.row>.x{flex:0 0 auto}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:14px;border:2px solid var(--bd);background:var(--card);cursor:pointer;font-weight:600}
+.chip.on{border-color:var(--pri);background:color-mix(in srgb,var(--pri) 12%,var(--card))}
+.chip input{accent-color:var(--pri);width:18px;height:18px}
+.score{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.score div{flex:1;min-width:90px;padding:8px 10px;border-radius:12px;border:2px solid var(--bd);background:var(--card);text-align:center}
+.score div.cur{border-color:var(--sun);background:color-mix(in srgb,var(--sun) 25%,var(--card))}
+.score b{display:block;font-size:1.5rem}
+.die{width:150px;height:150px;margin:18px auto;border-radius:34px;background:var(--sun);color:#17203a;display:grid;place-items:center;font-size:4.6rem;box-shadow:0 8px 0 #c79a1d;transition:transform .2s}
+.die.roll{animation:rl .25s linear infinite}
+@keyframes rl{50%{transform:rotate(12deg) translateY(-8px)}}
+@media(prefers-reduced-motion:reduce){.die.roll{animation:none}}
+.center{text-align:center}
+.timer{font-size:3.4rem;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.timer.low{color:var(--ko)}
+.bar{height:10px;border-radius:9px;background:var(--bd);overflow:hidden;margin:8px 0 14px}.bar i{display:block;height:100%;background:var(--pri);transition:width .1s linear}
+.word{text-align:center;padding:22px 14px}
+.word h2{font-size:clamp(1.7rem,8vw,2.4rem);margin:0 0 4px;letter-spacing:-.01em;line-height:1.1}
+.forb{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:16px}
+.forb span{padding:8px 12px;border-radius:12px;background:color-mix(in srgb,var(--ko) 14%,var(--card));border:2px solid var(--ko);font-weight:700}
+.mode{display:inline-block;padding:4px 12px;border-radius:99px;background:var(--sun);color:#17203a;font-weight:800;font-size:.9rem}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.acts .sk{grid-column:1/-1}
+.ok{background:var(--ok);color:#fff;border-color:var(--ok);font-size:1.15rem;padding:18px}.ko{background:var(--ko);color:#fff;border-color:var(--ko);font-size:1.15rem;padding:18px}
+.li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;border:2px solid var(--bd);margin:6px 0;background:var(--card);width:100%;text-align:left}
+.li.ok{border-color:var(--ok)}.li.ko{border-color:var(--ko)}
+.li.ok,.li.ko{color:var(--fg);background:var(--card);font-size:1rem;padding:10px 12px}
+.pod{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;border:2px solid var(--bd);margin:8px 0;background:var(--card)}
+.pod.w{border-color:var(--sun);background:color-mix(in srgb,var(--sun) 28%,var(--card))}
+.pod .p{font-size:1.7rem;width:2.2rem;text-align:center}.pod .n{flex:1;font-weight:700}.pod .s{font-size:1.6rem;font-weight:800}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:600;z-index:9;max-width:90%}
+details{margin-top:14px}summary{cursor:pointer;font-weight:700}
+html{-webkit-text-size-adjust:100%}body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
+button{touch-action:manipulation;min-height:48px;-webkit-user-select:none;user-select:none}
+.word,.die{-webkit-user-select:none;user-select:none}
+#top{max-width:560px;margin:0 auto;padding:10px 16px 0}#top button{min-height:40px;padding:8px 14px}
+.pg{display:flex;flex-direction:column;min-height:calc(100dvh - 120px)}
+.pg .word{flex:1;display:flex;flex-direction:column;justify-content:center}
+.acts{position:sticky;bottom:calc(8px + env(safe-area-inset-bottom,0px))}.acts .sk{grid-column:auto}
+.ok,.ko{min-height:84px}.forb span{font-size:1.1rem}
+.modal{position:fixed;inset:0;background:rgba(10,14,30,.65);display:grid;place-items:center;padding:20px;z-index:20}.modal .card{max-width:340px;width:100%}
+</style>
+</head>
+<body>
+<div id="top" hidden><button onclick="askMenu()">🏠 Menu principale</button></div>
+<div id="app"></div>
+<script>
+/* ===== CATEGORIE =====
+   Per aggiungerne una a mano: copia un blocco e usa righe "PAROLA|vietata1,vietata2,..."
+   Oppure usa «Aggiungi categoria» nell’app (JSON, salvato nel browser). */
+const BASE=[
+{id:"ac",name:"Giovanissimi AC",lines:`DON BOSCO|Prete,Santo,Ragazzi,Oratorio,Salesiani
+L’ORATORIO|Gioco,Ragazzi,Cortile,Catechismo,Chiesa
+GIOCOLERIA|Palline,Circo,Magia,Equilibrio,Spettacolo
+IL SOGNO (dei 9 anni)|Dormire,Notte,Lupi,Agnelli,Futuro
+SISTEMA PREVENTIVO|Punizione,Regole,Ragione,Religione,Amorevolezza
+TORINO|Città,Piemonte,Valdocco,Nord,Mole
+IL CORTILE|Giocare,Fuori,Spazio,Ricreazione,Pallone
+EDUCARE|Insegnare,Crescere,Genitori,Scuola,Imparare
+ALLEGRIA|Felicità,Gioia,Sorriso,Ridere,Festa
+L’ANIMATORE (o Educatore)|Gruppo,Ragazzi,Guida,Incontro,Gioco
+IMPARARE UN MESTIERE|Lavoro,Artigiano,Manuale,Bottega,Professione
+LA MAMMA (Mamma Margherita)|Genitore,Madre,Figlio,Famiglia,Casa
+POVERTÀ|Soldi,Ricchezza,Fame,Miseria,Bisogno
+IL CARCERE (minorile)|Prigione,Sbarre,Detenuti,Reati,Galera
+STUDIARE E LAVORARE|Scuola,Libri,Fatica,Soldi,Impegno
+EMARGINAZIONE|Escluso,Solo,Gruppo,Scartato,Fuori
+BULLISMO|Prendere in giro,Violenza,Vittima,Scuola,Prepotente
+ANSIA DA PRESTAZIONE|Voto,Paura,Verifica,Aspettative,Stress
+SOCIAL NETWORK|Instagram,TikTok,Telefono,Internet,Like
+SOLITUDINE|Solo,Amici,Nessuno,Isolato,Tristezza
+LITIGIO|Discussione,Rabbia,Pace,Urla,Scontro
+VOLONTARIATO|Aiutare,Gratis,Servizio,Poveri,Tempo
+LA BOCCIATURA|Scuola,Ripetere,Anno,Esame,Voti
+ADOLESCENZA|Età,Giovani,Crescere,Bambino,Adulto
+COMPLESSITÀ|Complicato,Difficile,Semplice,Tanti,Fattori
+PREGIUDIZIO|Giudicare,Opinione,Prima,Stereotipo,Conoscere
+SCELTA|Decidere,Possibilità,Alternativa,Volere,Bivio
+RELAZIONE|Amicizia,Persone,Rapporto,Incontro,Insieme
+DUBBIO|Domanda,Incertezza,Sicuro,Risposta,Perché
+CONTRADDIZIONE|Opposto,Coerenza,Dire,Fare,Contrario
+SFUMATURA|Colore,Bianco,Nero,Grigio,Dettaglio
+EMPATIA|Panni,Altri,Sentire,Emozioni,Capire
+FRAGILITÀ|Debole,Rompere,Forte,Delicato,Limite
+ASCOLTO|Orecchie,Sentire,Parlare,Silenzio,Attenzione
+PUNTO DI VISTA|Prospettiva,Occhi,Opinione,Guardare,Diverso
+COMPROMESSO|Accordo,Metà,Rinunciare,Incontro,Decidere
+RESPONSABILITÀ|Colpa,Maturo,Prendersi cura,Azioni,Conseguenze
+OSTACOLO|Problema,Superare,Difficoltà,Muro,Strada
+CAMBIAMENTO|Trasformare,Nuovo,Diventare,Prima,Dopo
+RICOMINCIARE|Inizio,Capo,Nuovo,Partire,Errore
+PERDONO|Scusa,Colpa,Pace,Sbagliare,Confessione
+SPERANZA|Futuro,Fiducia,Verde,Meglio,Domani
+SECONDA POSSIBILITÀ|Occasione,Sbaglio,Due,Riprovare,Nuova
+MERAVIGLIA|Stupore,Bello,Sorpresa,Bambini,Occhi
+FIDUCIA|Credere,Tradire,Amico,Sicuro,Affidarsi
+CORAGGIO|Paura,Affrontare,Eroe,Forza,Buttarsi
+CREATIVITÀ|Fantasia,Inventare,Arte,Nuovo,Idee
+IL FUTURO|Domani,Passato,Presente,Tempo,Avanti
+AZIONE CATTOLICA|Associazione,Giovanissimi,Gruppo,Parrocchia,ACR
+IL VANGELO|Gesù,Bibbia,Parola,Chiesa,Libro
+AMOREVOLEZZA|Affetto,Bene,Sistema,Dolcezza,Educare
+CAMMINARE SULLA CORDA|Equilibrio,Filo,Funambolo,Cadere,Circo
+LA BANDA MUSICALE|Strumenti,Suonare,Musica,Concerto,Oratorio
+LA SCUOLA SERALE|Notte,Studiare,Lavorare,Lezione,Imparare
+IL CANE GRIGIO|Animale,Difendere,Pericolo,Abbaiare,Amico
+RAGAZZI DI STRADA|Poveri,Abbandonati,Casa,Città,Orfani
+GITA IN CAMPAGNA|Camminare,Natura,Passeggiata,Fuori,Festa
+IL TEATRINO|Recitare,Palco,Spettacolo,Attori,Pubblico
+ACCOGLIERE|Ospitare,Casa,Porte,Ricevere,Benvenuto
+BUONI CRISTIANI E ONESTI CITTADINI|Frase,Società,Chiesa,Regole,Obiettivo
+IL LABORATORIO (o Bottega)|Falegname,Sarto,Lavoro,Manuale,Attrezzi
+DARE FIDUCIA|Credere,Scommettere,Possibilità,Ragazzi,Tradire
+PRESSIONE DEL GRUPPO|Amici,Fare come gli altri,Massa,Influenzare,Seguire
+PAURA DEL GIUDIZIO|Altri,Pensare,Critica,Vergogna,Parlare
+INCOMPRENSIONE IN FAMIGLIA|Genitori,Capire,Litigare,Casa,Dialogo
+DELUSIONE D’AMORE|Cuore,Fidanzato,Lasciarsi,Piangere,Soffrire
+FAKE NEWS|Notizia,Falsa,Internet,Bugia,Giornale
+DIPENDENZA (es. dallo smartphone)|Schermo,Telefono,Staccarsi,Droga,Sempre
+INSICUREZZA|Autostima,Paura,Dubbio,Specchio,Capace
+FARE GRUPPO (squadra)|Insieme,Unione,Amici,Collaborare,Escludere
+IL CONFRONTO CON GLI ALTRI|Paragonare,Meglio,Peggio,Invidia,Social
+ANNOIARSI|Tempo,Nulla,Fare,Divertimento,Vuoto
+PERDERE UN AMICO|Allontanarsi,Litigio,Fine,Rapporto,Legame
+SCEGLIERE DOPO LA SCUOLA|Università,Lavoro,Futuro,Diploma,Maturità
+APPARENZA|Sembrare,Superficie,Esterno,Giudicare,Realtà
+ETICHETTA|Pregiudizio,Categoria,Vestiti,Nome,Definire
+DIVERSITÀ|Uguale,Differente,Unico,Altro,Strano
+EQUILIBRIO|Cadere,Centro,Bilancia,Stabile,Metà
+PAZIENZA|Aspettare,Calma,Fretta,Tempo,Sopportare
+INCERTEZZA|Futuro,Dubbio,Sicuro,Non sapere,Paura
+APPROFONDIRE|Capire,Fondo,Superficiale,Studiare,Andare oltre
+CONFLITTO|Scontro,Guerra,Litigio,Pace,Idee
+LIBERTÀ|Fare,Regole,Prigione,Scelta,Volare
+COERENZA|Dire,Fare,Pensiero,Azione,Fedele
+LIMITE|Confine,Superare,Difetto,Fermarsi,Massimo
+RETE (connessione)|Legami,Internet,Pescatori,Fili,Unire
+IDENTITÀ|Chi sono,Carta,Nome,Sé stesso,Carattere
+DIALOGO|Parlare,Ascoltare,Parole,Discussione,Due
+RINASCITA|Nuova vita,Pasqua,Fiore,Primavera,Morire
+IL CAMPO SCUOLA|Estate,Montagna,Giorni,Casa,Insieme
+LA PREGHIERA|Dio,Parlare,Chiesa,Silenzio,Chiedere
+GRATITUDINE|Grazie,Dono,Riconoscenza,Ricevere,Bello
+SGUARDO NUOVO|Occhi,Vedere,Cambiare,Prospettiva,Meraviglia
+METTERSI IN GIOCO|Partecipare,Provare,Rischiare,Impegnarsi,Paura
+LA TESSERA (dell’AC)|Iscrizione,Socio,Appartenenza,Anno,Carta
+TESTIMONIANZA|Esempio,Raccontare,Vita,Fede,Dimostrare
+PROVVIDENZA|Dio,Aiuto,Don Bosco,Fiducia,Bisogno
+FRATERNITÀ|Fratelli,Amicizia,Comunità,Volersi bene,Famiglia
+VOCAZIONE|Chiamata,Strada,Futuro,Dio,Scelta
+LA FESTA|Gioia,Musica,Celebrare,Insieme,Divertirsi`}];
+
+/* Dado: pesi in % (somma 100) */
+const MODES=[
+{k:"n",n:"Normale",w:50,i:"🗣️",d:"Spiega la parola senza usare i termini vietati."},
+{k:"d",n:"Descrizione",w:15,i:"📝",d:"Solo parole: niente gesti né versi. Evita i termini vietati."},
+{k:"m",n:"Mimo",w:15,i:"🤸",d:"Fai indovinare soltanto con i gesti. Vietato parlare!"},
+{k:"s",n:"Disegno",w:20,i:"✏️",d:"Fai indovinare disegnando. Niente parole né numeri!"}];
+
+const app=document.getElementById("app");
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let custom=[];try{custom=JSON.parse(localStorage.getItem("taboo_custom")||"[]")}catch(e){}
+const saveCustom=()=>{try{localStorage.setItem("taboo_custom",JSON.stringify(custom))}catch(e){}};
+const norm=c=>({id:c.id,name:c.name,custom:!c.lines,cards:c.lines?c.lines.trim().split("\n").map(l=>{const[a,b]=l.split("|");return{w:a.trim(),f:b.split(",").map(x=>x.trim())}}):c.cards.map(([w,f])=>({w,f}))});
+const cats=()=>[...BASE,...custom].map(norm);
+const cfg={teams:["Squadra 1","Squadra 2"],dur:60,rounds:2,pen:true,sel:null,sound:true};
+let G=null,tm=null,ac=null;
+
+function toast(t){const e=document.createElement("div");e.className="toast";e.textContent=t;document.body.appendChild(e);setTimeout(()=>e.remove(),2600)}
+function beep(f=660,ms=150){if(!cfg.sound)return;try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=f;g.gain.value=.15;o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+ms/1000)}catch(e){}}
+const buzz=p=>{try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}};
+
+let wlk=null;async function wl(on){try{if(on&&navigator.wakeLock){wlk=await navigator.wakeLock.request("screen")}else if(wlk){await wlk.release();wlk=null}}catch(e){}}
+document.addEventListener("visibilitychange",()=>{if(G&&!G.done&&document.visibilityState=="visible")wl(true)});
+let mp=false;
+function askMenu(){
+  if(!G||G.done)return setup();
+  const T=G.turn;mp=false;
+  if(T&&T.cur&&!T.paused&&document.getElementById("tt")){pause();mp=true}
+  const m=document.createElement("div");m.className="modal";m.id="mod";
+  m.innerHTML=`<div class="card"><h2 style="margin-top:0">Tornare al menu principale?</h2><p class="mut">La partita in corso andrà persa.</p><button class="pri big" onclick="closeMenu(true)">Continua a giocare</button><button class="big" onclick="closeMenu(false)">Esci al menu</button></div>`;
+  document.body.appendChild(m);
+}
+function closeMenu(keep){document.getElementById("mod").remove();if(!keep)return setup();if(mp)pause()}
+/* ===== SETUP ===== */
+function setup(){
+  clearInterval(tm);G=null;wl(false);document.getElementById("top").hidden=true;
+  const cs=cats();if(!cfg.sel)cfg.sel=new Set(cs.map(c=>c.id));
+  app.innerHTML=`<h1>Taboo</h1><p class="mut">Descrivi la parola senza dire quelle vietate. Scegli categorie e squadre, poi si parte.</p>
+  <h2>Categorie</h2><div class="chips">${cs.map(c=>`<label class="chip ${cfg.sel.has(c.id)?"on":""}"><input type="checkbox" ${cfg.sel.has(c.id)?"checked":""} onchange="tgl('${esc(c.id)}')">${esc(c.name)} <span class="mut">${c.cards.length}</span></label>`).join("")}</div>
+  <h2>Squadre</h2>${cfg.teams.map((t,i)=>`<div class="row" style="margin:6px 0"><input type="text" aria-label="Nome squadra ${i+1}" value="${esc(t)}" maxlength="24" oninput="cfg.teams[${i}]=this.value">${cfg.teams.length>2?`<button class="x" aria-label="Rimuovi squadra" onclick="cfg.teams.splice(${i},1);setup()">✕</button>`:""}</div>`).join("")}
+  ${cfg.teams.length<6?`<button onclick="cfg.teams.push('Squadra '+(cfg.teams.length+1));setup()">+ Aggiungi squadra</button>`:""}
+  <h2>Regole</h2><div class="row"><label>Durata turno<select onchange="cfg.dur=+this.value">${[30,45,60,90,120].map(v=>`<option value="${v}" ${v==cfg.dur?"selected":""}>${v} secondi</option>`).join("")}</select></label>
+  <label>Turni per squadra<select onchange="cfg.rounds=+this.value">${[1,2,3,4,5,6,7,8,9,10].map(v=>`<option ${v==cfg.rounds?"selected":""}>${v}</option>`).join("")}</select></label></div>
+  <label class="chip ${cfg.pen?"on":""}" style="margin-top:10px"><input type="checkbox" ${cfg.pen?"checked":""} onchange="cfg.pen=this.checked;setup()">Ogni errore toglie 1 punto</label>
+  <label class="chip ${cfg.sound?"on":""}" style="margin-top:8px"><input type="checkbox" ${cfg.sound?"checked":""} onchange="cfg.sound=this.checked;setup()">Suoni e vibrazione</label>
+  <button class="pri big" onclick="start()">Inizia la partita</button>
+  <details><summary>Aggiungi categoria</summary><p class="mut">Incolla un JSON con questo formato. Resta salvato su questo dispositivo.</p>
+  <textarea id="imp" rows="6" spellcheck="false">{"name":"La mia categoria","cards":[["PAROLA",["vietata 1","vietata 2","vietata 3","vietata 4","vietata 5"]]]}</textarea>
+  <button style="margin-top:8px" onclick="imp()">Salva categoria</button>
+  ${custom.length?`<p class="mut" style="margin-top:10px">Tue categorie: ${custom.map((c,i)=>`${esc(c.name)} <button class="x" style="padding:2px 8px" aria-label="Elimina ${esc(c.name)}" onclick="delc(${i})">✕</button>`).join(" ")}</p>`:""}</details>`;
+}
+function tgl(id){cfg.sel.has(id)?cfg.sel.delete(id):cfg.sel.add(id);setup()}
+function imp(){try{let j=JSON.parse(document.getElementById("imp").value);j=Array.isArray(j)?j:[j];j.forEach(c=>{if(!c.name||!Array.isArray(c.cards)||!c.cards.every(x=>x[0]&&Array.isArray(x[1])))throw 0;const id="u"+Date.now()+Math.random().toString(36).slice(2,5);custom.push({id,name:c.name,cards:c.cards});cfg.sel.add(id)});saveCustom();setup();toast("Categoria aggiunta")}catch(e){toast("JSON non valido: controlla il formato")}}
+function delc(i){cfg.sel.delete(custom[i].id);custom.splice(i,1);saveCustom();setup()}
+
+/* ===== PARTITA ===== */
+function start(){
+  const cs=cats().filter(c=>cfg.sel.has(c.id));
+  if(!cs.length)return toast("Scegli almeno una categoria");
+  const names=cfg.teams.map((t,i)=>t.trim()||"Squadra "+(i+1));
+  G={teams:names.map(n=>({n,s:0,ok:0,ko:0})),t:0,total:names.length*cfg.rounds,pool:cs.flatMap(c=>c.cards),used:new Set(),turn:null};
+  document.getElementById("top").hidden=false;try{ac=ac||new (window.AudioContext||window.webkitAudioContext)()}catch(e){}wl(true);
+  ready();
+}

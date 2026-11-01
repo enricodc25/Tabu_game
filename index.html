@@ -7,7 +7,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%232c3e91'/%3E%3Ctext x='50' y='65' font-size='48' font-family='sans-serif' font-weight='bold' fill='%23f6c23e' text-anchor='middle'%3ET%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%232c3e91'/%3E%3Ctext x='50' y='65' font-size='48' font-family='sans-serif' font-weight='bold' fill='%23f6c23e' text-anchor='middle'%3ET%3C/text%3E%3C/svg%3E">
 <title>Taboo · Giovanissimi AC</title>
 <script>
   if ('serviceWorker' in navigator) {
@@ -82,9 +83,6 @@ button{touch-action:manipulation;min-height:48px;-webkit-user-select:none;user-s
 <div id="top" hidden><button onclick="askMenu()">🏠 Menu principale</button></div>
 <div id="app"></div>
 <script>
-/* ===== CATEGORIE =====
-   Per aggiungerne una a mano: copia un blocco e usa righe "PAROLA|vietata1,vietata2,..."
-   Oppure usa «Aggiungi categoria» nell’app (JSON, salvato nel browser). */
 const BASE=[
 {id:"ac",name:"Giovanissimi AC",lines:`DON BOSCO|Prete,Santo,Ragazzi,Oratorio,Salesiani
 L’ORATORIO|Gioco,Ragazzi,Cortile,Catechismo,Chiesa
@@ -187,7 +185,6 @@ FRATERNITÀ|Fratelli,Amicizia,Comunità,Volersi bene,Famiglia
 VOCAZIONE|Chiamata,Strada,Futuro,Dio,Scelta
 LA FESTA|Gioia,Musica,Celebrare,Insieme,Divertirsi`}];
 
-/* Dado: pesi in % (somma 100) */
 const MODES=[
 {k:"n",n:"Normale",w:50,i:"🗣️",d:"Spiega la parola senza usare i termini vietati."},
 {k:"d",n:"Descrizione",w:15,i:"📝",d:"Solo parole: niente gesti né versi. Evita i termini vietati."},
@@ -196,7 +193,12 @@ const MODES=[
 
 const app=document.getElementById("app");
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-let custom=[];try{custom=JSON.parse(localStorage.getItem("taboo_custom")||"[]")}catch(e){}
+let custom=[];
+try {
+  const p = JSON.parse(localStorage.getItem("taboo_custom") || "[]");
+  custom = Array.isArray(p) ? p : [];
+} catch(e) { custom = []; }
+
 const saveCustom=()=>{try{localStorage.setItem("taboo_custom",JSON.stringify(custom))}catch(e){}};
 const norm=c=>({id:c.id,name:c.name,custom:!c.lines,cards:c.lines?c.lines.trim().split("\n").map(l=>{const[a,b]=l.split("|");return{w:a.trim(),f:b.split(",").map(x=>x.trim())}}):c.cards.map(([w,f])=>({w,f}))});
 const cats=()=>[...BASE,...custom].map(norm);
@@ -219,7 +221,7 @@ function askMenu(){
   document.body.appendChild(m);
 }
 function closeMenu(keep){document.getElementById("mod").remove();if(!keep)return setup();if(mp)pause()}
-/* ===== SETUP ===== */
+
 function setup(){
   clearInterval(tm);G=null;wl(false);document.getElementById("top").hidden=true;
   const cs=cats();if(!cfg.sel)cfg.sel=new Set(cs.map(c=>c.id));
@@ -241,7 +243,6 @@ function tgl(id){cfg.sel.has(id)?cfg.sel.delete(id):cfg.sel.add(id);setup()}
 function imp(){try{let j=JSON.parse(document.getElementById("imp").value);j=Array.isArray(j)?j:[j];j.forEach(c=>{if(!c.name||!Array.isArray(c.cards)||!c.cards.every(x=>x[0]&&Array.isArray(x[1])))throw 0;const id="u"+Date.now()+Math.random().toString(36).slice(2,5);custom.push({id,name:c.name,cards:c.cards});cfg.sel.add(id)});saveCustom();setup();toast("Categoria aggiunta")}catch(e){toast("JSON non valido: controlla il formato")}}
 function delc(i){cfg.sel.delete(custom[i].id);custom.splice(i,1);saveCustom();setup()}
 
-/* ===== PARTITA ===== */
 function start(){
   const cs=cats().filter(c=>cfg.sel.has(c.id));
   if(!cs.length)return toast("Scegli almeno una categoria");
@@ -250,3 +251,83 @@ function start(){
   document.getElementById("top").hidden=false;try{ac=ac||new (window.AudioContext||window.webkitAudioContext)()}catch(e){}wl(true);
   ready();
 }
+const scoreBar=()=>`<div class="score">${G.teams.map((t,i)=>`<div class="${i==G.t%G.teams.length?"cur":""}"><span class="mut">${esc(t.n)}</span><b>${t.s}</b></div>`).join("")}</div>`;
+function ready(){
+  const ti=G.t%G.teams.length,r=Math.floor(G.t/G.teams.length)+1;
+  G.turn={log:[],mode:null};
+  app.innerHTML=`<p class="mut center">Giro ${r} di ${cfg.rounds}</p><h1 class="center">Tocca a ${esc(G.teams[ti].n)}</h1>${scoreBar()}
+  <p class="center mut">Passate il telefono a chi spiega, gli altri guardano altrove. Poi lancia il dado.</p>
+  <div class="die" id="die" aria-live="polite">🎲</div><div class="center" id="dinfo"></div>
+  <button class="pri big" id="rb" onclick="roll()">Lancia il dado</button>`;
+}
+function roll(){
+  const die=document.getElementById("die"),rb=document.getElementById("rb");rb.disabled=true;die.classList.add("roll");
+  let n=0;const iv=setInterval(()=>{die.textContent=MODES[n++%4].i;beep(300+n*20,40)},110);
+  setTimeout(()=>{clearInterval(iv);die.classList.remove("roll");
+    let x=Math.random()*100,m=MODES[0];for(const o of MODES){if(x<o.w){m=o;break}x-=o.w}
+    G.turn.mode=m;die.textContent=m.i;buzz(60);
+    document.getElementById("dinfo").innerHTML=`<span class="mode">${m.n}</span><p>${m.d}</p>`;
+    rb.disabled=false;rb.textContent="Via!";rb.onclick=play},1300);
+}
+function draw(){
+  let av=G.pool.filter(c=>!G.used.has(c.w));
+  if(!av.length){G.used.clear();av=G.pool;toast("Carte finite: il mazzo si rimescola")}
+  const c=av[Math.floor(Math.random()*av.length)];G.used.add(c.w);return c;
+}
+function play(){
+  const T=G.turn;T.left=cfg.dur*1000;T.end=Date.now()+T.left;T.paused=false;T.cur=draw();
+  const ti=G.t%G.teams.length;
+  app.innerHTML=`<div class="pg"><div class="row"><div><span class="mut">${esc(G.teams[ti].n)}</span> <span class="mode">${T.mode.i} ${T.mode.n}</span></div><div class="x center"><b id="cnt" style="font-size:1.6rem">0</b><div class="mut">giuste</div></div></div>
+  <div class="center timer" id="tt" style="margin-top:6px">${cfg.dur}</div><div class="bar"><i id="br" style="width:100%"></i></div>
+  <div class="card word" id="wc"></div>
+  <div class="acts"><button class="ko" onclick="mark('ko')">✘ Sbagliata</button><button class="ok" onclick="mark('ok')">✔ Giusta</button><button class="sk" onclick="mark('sk')">⏭ Scarta</button><button class="sk" id="pb" onclick="pause()">⏸ Pausa</button></div></div>`;
+  showCard();clearInterval(tm);tm=setInterval(tick,100);
+}
+function showCard(){
+  const T=G.turn,c=T.cur,k=T.mode.k;
+  document.getElementById("wc").innerHTML=`<h2>${esc(c.w)}</h2><div class="forb">${c.f.map(f=>`<span>${esc(f)}</span>`).join("")}</div>`+(k=="m"||k=="s"?`<p class="mut" style="margin-top:14px">${T.mode.i} ${T.mode.n}: ${k=="m"?"solo gesti":"solo disegno"}</p>`:"");
+}
+function tick(){
+  const T=G.turn;if(T.paused)return;
+  const left=Math.max(0,T.end-Date.now()),s=Math.ceil(left/1000),tt=document.getElementById("tt");
+  if(!tt)return;
+  if(T.lastS!==s){T.lastS=s;tt.textContent=s;tt.classList.toggle("low",s<=10);if(s<=5&&s>0){beep(520,80);buzz(30)}}
+  document.getElementById("br").style.width=left/(cfg.dur*10)+"%";
+  if(left<=0){clearInterval(tm);beep(220,600);buzz([200,100,200]);summary()}
+}
+function mark(r){
+  const T=G.turn;if(T.paused)return;
+  T.log.push({w:T.cur.w,r});T.cur=draw();showCard();
+  document.getElementById("cnt").textContent=T.log.filter(x=>x.r=="ok").length;buzz(20);
+}
+function pause(){
+  const T=G.turn,b=document.getElementById("pb");
+  if(T.paused){T.paused=false;T.end=Date.now()+T.left;b.textContent="⏸ Pausa";document.getElementById("wc").style.visibility="visible"}
+  else{T.paused=true;T.left=T.end-Date.now();b.textContent="▶ Riprendi";document.getElementById("wc").style.visibility="hidden"}
+}
+const pts=l=>l.filter(x=>x.r=="ok").length-(cfg.pen?l.filter(x=>x.r=="ko").length:0);
+function summary(){
+  const T=G.turn,ti=G.t%G.teams.length,L={ok:"✔ Giusta",ko:"✘ Sbagliata",sk:"⏭ Scartata"};
+  app.innerHTML=`<h1>Tempo scaduto!</h1><p class="mut">${esc(G.teams[ti].n)}: controlla le parole. Tocca una parola per cambiarne l’esito.</p>
+  <div class="center card" style="margin:12px 0"><span class="mut">Punti del turno</span><div class="timer" id="tp">${pts(T.log)}</div></div>
+  <div id="ls">${T.log.length?T.log.map((x,i)=>`<button class="li ${x.r}" onclick="cyc(${i})"><span>${esc(x.w)}</span><span>${L[x.r]}</span></button>`).join(""):`<p class="mut center">Nessuna parola giocata in questo turno.</p>`}</div>
+  <button class="pri big" onclick="confirmT()">${G.t+1>=G.total?"Vedi la classifica":"Conferma e passa il turno"}</button>`;
+}
+function cyc(i){const l=G.turn.log[i];l.r={ok:"ko",ko:"sk",sk:"ok"}[l.r];summary()}
+function confirmT(){
+  const T=G.turn,t=G.teams[G.t%G.teams.length];
+  t.ok+=T.log.filter(x=>x.r=="ok").length;t.ko+=T.log.filter(x=>x.r=="ko").length;t.s+=pts(T.log);
+  G.t++;G.t>=G.total?final():ready();
+}
+function final(){G.done=1;wl(false);
+  const r=[...G.teams].sort((a,b)=>b.s-a.s||b.ok-a.ok),top=r[0],tie=r.filter(t=>t.s==top.s&&t.ok==top.ok).length>1;
+  const med=["🥇","🥈","🥉"];
+  app.innerHTML=`<h1 class="center">${tie?"Pareggio!":"Vince "+esc(top.n)+"!"}</h1><p class="mut center">Classifica finale (a parità di punti conta il numero di parole indovinate)</p>
+  ${r.map((t,i)=>`<div class="pod ${t.s==top.s&&t.ok==top.ok?"w":""}"><span class="p">${med[i]||i+1}</span><span class="n">${esc(t.n)}<br><span class="mut" style="font-weight:400">${t.ok} indovinate${cfg.pen?` · ${t.ko} errori`:""}</span></span><span class="s">${t.s}</span></div>`).join("")}
+  <button class="pri big" onclick="start()">Rivincita (stesse squadre)</button>
+  <button class="big" onclick="setup()">Cambia impostazioni</button>`;
+}
+setup();
+</script>
+</body>
+</html>
